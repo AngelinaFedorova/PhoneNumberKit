@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <!--    strange solution for error while building-->
+    <!--    Android resource linking failed-->
+    <!--    error: resource style/ShapeAppearanceOverlay-->
+    <style name="ShapeAppearanceOverlay" />
+
     <style name="ThemeOverlay.PhoneNumberKit.BottomSheetDialog"
         parent="@style/ThemeOverlay.MaterialComponents.BottomSheetDialog">
 

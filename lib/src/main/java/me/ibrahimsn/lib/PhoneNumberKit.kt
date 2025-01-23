@@ -214,8 +214,7 @@ class PhoneNumberKit private constructor(
                 )
             ).apply {
                 onCountrySelectedListener = { country ->
-                    clearInputValue()
-                    setCountry(country)
+                    setCountryResult(country)
                 }
                 show(
                     activity.supportFragmentManager,
@@ -223,6 +222,11 @@ class PhoneNumberKit private constructor(
                 )
             }
         }
+    }
+
+    fun setCountryResult(country: Country) {
+        clearInputValue()
+        setCountry(country)
     }
 
     /**

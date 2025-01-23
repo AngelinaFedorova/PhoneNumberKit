@@ -17,6 +17,11 @@ class MainActivity : AppCompatActivity() {
 
         val phoneNumberKit = PhoneNumberKit.Builder(this)
             .setIconEnabled(true)
+            .setDefaultCountryIso2("ru")
+            .setPhoneCallback { icon, country ->
+                binding.codeFlag.setImageDrawable(icon)
+                binding.countryText.text = country.toString()
+            }
             .build()
 
         // To attach an editTextLayout

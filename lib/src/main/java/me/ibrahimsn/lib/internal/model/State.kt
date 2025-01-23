@@ -10,5 +10,6 @@ sealed class State {
     data class Attached(
         val country: Country,
         val pattern: String,
+        val time: Long,
     ) : State()
 }

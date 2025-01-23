@@ -12,7 +12,6 @@ import com.redmadrobot.inputmask.MaskedTextChangedListener.Companion.installOn
 import com.redmadrobot.inputmask.helper.AffinityCalculationStrategy
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collect
 import me.ibrahimsn.lib.api.Country
 import me.ibrahimsn.lib.api.Phone
 import me.ibrahimsn.lib.internal.core.Proxy
@@ -30,6 +29,8 @@ class PhoneNumberKit private constructor(
     private val isIconEnabled: Boolean,
     private val excludedCountries: List<String>,
     private val admittedCountries: List<String>,
+    private val defaultCountryIso2: String? = null,
+    private val phoneCallBack: ((Drawable?, Country) -> Unit)? = null,
 ) {
 
     private val supervisorJob = SupervisorJob()
@@ -81,7 +82,7 @@ class PhoneNumberKit private constructor(
                         )
 
                         if (state.country.code != parsedNumber?.countryCode) {
-                            val country = countriesCache.findCountry(parsedNumber?.countryCode)
+                            val country = countriesCache.findCountry(parsedNumber?.countryCode, defaultCountryIso2)
                             if (country != null) {
                                 setCountry(country)
                             }
@@ -110,7 +111,8 @@ class PhoneNumberKit private constructor(
         )
         state.value = State.Attached(
             country = country,
-            pattern = pattern
+            pattern = pattern,
+            time = System.currentTimeMillis()
         )
     }
 
@@ -121,7 +123,7 @@ class PhoneNumberKit private constructor(
         this.input = WeakReference(input)
         scope.launch {
             val country = default {
-                getCountries().findCountry(defaultCountry)
+                getCountries().findCountry(defaultCountry, defaultCountryIso2)
             }
             if (country != null) {
                 attachToInput(input, country)
@@ -151,15 +153,16 @@ class PhoneNumberKit private constructor(
             when (state) {
                 is State.Ready -> {}
                 is State.Attached -> {
-                    if (isIconEnabled) {
-                        getFlagIcon(state.country.iso2)?.let { icon ->
+                    getFlagIcon(state.country.iso2)?.let { icon ->
+                        if (isIconEnabled) {
                             input.get()?.startIconDrawable = icon
                         }
+                        phoneCallBack?.invoke(icon, state.country)
                     }
                     input.get()?.editText?.let { editText ->
                         setupListener(editText, state.pattern)
                     }
-                    if (inputValue.isNullOrEmpty()) {
+                    if (inputValue.isNullOrEmpty() || inputValue?.all { !it.isDigit() } == true) {
                         inputValue = state.country.code.toString()
                     }
                 }
@@ -278,13 +281,31 @@ class PhoneNumberKit private constructor(
     }
 
     private fun List<Country>.findCountry(
-        countryCode: Int?
+        countryCode: Int?,
     ) = this.filter {
         admittedCountries.isEmpty() || admittedCountries.contains(it.iso2)
     }.filterNot {
         excludedCountries.contains(it.iso2)
     }.firstOrNull {
         it.code == countryCode
+    }
+
+    private fun List<Country>.findCountry(
+        countryCode: Int?,
+        countryIso2: String? = null
+    ): Country? {
+        return if (countryIso2 == null) {
+            this.findCountry(countryCode)
+        } else {
+            val filterList = this.filter {
+                admittedCountries.isEmpty() || admittedCountries.contains(it.iso2)
+            }.filterNot {
+                excludedCountries.contains(it.iso2)
+            }.filter {
+                it.code == countryCode
+            }
+            filterList.find { it.iso2 == countryIso2 } ?: filterList.firstOrNull()
+        }
     }
 
     private fun List<Country>.findCountry(
@@ -316,6 +337,10 @@ class PhoneNumberKit private constructor(
 
         private var admittedCountries: List<String>? = null
 
+        private var phoneCallBack: ((Drawable?, Country) -> Unit)? = null
+
+        private var defaultCountryIso2: String? = null
+
         fun setIconEnabled(isEnabled: Boolean): Builder {
             this.isIconEnabled = isEnabled
             return this
@@ -331,12 +356,24 @@ class PhoneNumberKit private constructor(
             return this
         }
 
+        fun setPhoneCallback(phoneCallBack: (Drawable?, Country) -> Unit): Builder {
+            this.phoneCallBack = phoneCallBack
+            return this
+        }
+
+        fun setDefaultCountryIso2(defaultCountryIso2: String): Builder {
+            this.defaultCountryIso2 = defaultCountryIso2
+            return this
+        }
+
         fun build(): PhoneNumberKit {
             return PhoneNumberKit(
                 context,
                 isIconEnabled,
                 excludedCountries.orEmpty(),
-                admittedCountries.orEmpty()
+                admittedCountries.orEmpty(),
+                defaultCountryIso2,
+                phoneCallBack
             )
         }
     }

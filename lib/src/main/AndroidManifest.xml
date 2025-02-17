@@ -1,4 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="me.ibrahimsn.lib">
 
+    <application>
+        <provider
+            android:name=".AssetsContentProvider"
+            android:authorities="me.ibrahimsn.lib.assetsprovider"
+            android:exported="true"
+            android:grantUriPermissions="true"/>
+    </application>
+
 </manifest>
